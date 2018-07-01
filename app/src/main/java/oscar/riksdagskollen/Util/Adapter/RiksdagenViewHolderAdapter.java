@@ -42,6 +42,11 @@ public abstract class RiksdagenViewHolderAdapter extends RecyclerView.Adapter<Re
         this.clickListener = clickListener;
     }
 
+    public void setItems(List<?> items) {
+        this.items = items;
+        notifyDataSetChanged();
+    }
+
     @Override
     public abstract RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType);
 

@@ -130,7 +130,29 @@ public class RiksdagenAPIManager {
      * @param callback callback which a List of one specific decision is returned to
      */
     public void getDecisionWithId(final DecisionsCallback callback, String id){
-        String subURL = "/dokumentlista/?doktyp=bet&utformat=json&dok_id="+id;
+        String subURL = "/dokumentlista/?doktyp=bet&sort=datum&sortorder=desc&utformat=json&dok_id="+id;
+        requestManager.doGetRequest(subURL, new JSONRequestCallback() {
+            @Override
+            public void onRequestSuccess(JSONObject response) {
+                try {
+                    JSONArray jsonDocuments = response.getJSONObject("dokumentlista").getJSONArray("dokument");
+                    DecisionDocument[] decisionDocuments = gson.fromJson(jsonDocuments.toString(),DecisionDocument[].class);
+                    callback.onDecisionsFetched(Arrays.asList(decisionDocuments));
+                }catch (JSONException e){
+                    e.printStackTrace();
+                    callback.onFail(new VolleyError("Failed to parse JSON"));
+                }
+            }
+
+            @Override
+            public void onRequestFail(VolleyError error) {
+                callback.onFail(error);
+            }
+        });
+    }
+
+    public void searchForDecision(final DecisionsCallback callback, String search, int pageToLoad){
+        String subURL = "/dokumentlista/?sok=" + search + "&sort=rel&sortorder=desc&doktyp=bet&utformat=json"+"&p="+pageToLoad;
         requestManager.doGetRequest(subURL, new JSONRequestCallback() {
             @Override
             public void onRequestSuccess(JSONObject response) {

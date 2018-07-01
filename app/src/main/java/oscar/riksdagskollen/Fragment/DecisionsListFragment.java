@@ -1,11 +1,18 @@
 package oscar.riksdagskollen.Fragment;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.SearchView;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ListView;
+import android.widget.Toast;
 
 import com.android.volley.VolleyError;
 
@@ -26,7 +33,13 @@ import oscar.riksdagskollen.Util.Adapter.RiksdagenViewHolderAdapter;
 public class DecisionsListFragment extends RiksdagenAutoLoadingListFragment {
 
     private List<DecisionDocument> decisionDocuments = new ArrayList<>();
+    private List<DecisionDocument> searchedDocuments = new ArrayList<>();
+    private RiksdagenViewHolderAdapter searchAdapter;
+
     private DecisionListAdapter adapter;
+    private MenuItem menuItem;
+    private SearchView searchView;
+    private String currentQuery = "";
 
     public static DecisionsListFragment newInstance(){
         DecisionsListFragment newInstance = new DecisionsListFragment();
@@ -43,6 +56,7 @@ public class DecisionsListFragment extends RiksdagenAutoLoadingListFragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setHasOptionsMenu(true);
         adapter = new DecisionListAdapter(decisionDocuments, new RiksdagenViewHolderAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(Object document) {
@@ -54,8 +68,109 @@ public class DecisionsListFragment extends RiksdagenAutoLoadingListFragment {
 
 
     @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        menuItem = menu.findItem( R.id.action_search);
+        searchView = (SearchView) menuItem.getActionView();
+
+        menuItem.setVisible(true);
+        searchView.setQueryHint("Sök efter beslut...");
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                if(!currentQuery.equals(query)) resetSearchPage();
+
+                currentQuery = query;
+
+                if (!isSearching()){
+                    getRecyclerView().swapAdapter(adapter,false);
+                } else {
+                    setShowLoadingView(true);
+                    RikdagskollenApp.getInstance().getRiksdagenAPIManager().searchForDecision(new DecisionsCallback() {
+                        @Override
+                        public void onDecisionsFetched(List<DecisionDocument> decisions) {
+                            searchedDocuments.clear();
+                            searchedDocuments.addAll(decisions);
+                            searchAdapter = new DecisionListAdapter(searchedDocuments, new RiksdagenViewHolderAdapter.OnItemClickListener() {
+                                @Override
+                                public void onItemClick(Object document) {
+
+                                }
+                            }, getRecyclerView());
+                            setShowLoadingView(false);
+                            getRecyclerView().swapAdapter(searchAdapter,false);
+                        }
+
+                        @Override
+                        public void onFail(VolleyError error) {
+                            setShowLoadingView(false);
+                            Toast.makeText(getContext(),"Hittade inga sökresultat", Toast.LENGTH_LONG).show();
+                        }
+                    }, query, getSearchPageToLoad());
+                }
+                return true;
+            }
+            @Override
+            public boolean onQueryTextChange(String s) {
+                if(s.isEmpty()) onQueryTextSubmit(s);
+                return false;
+            }
+        });
+
+
+
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if(menuItem != null) menuItem.setVisible(true);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        menuItem.setVisible(false);
+    }
+
+
+
+    @Override
     protected void loadNextPage() {
         setLoadingMoreItems(true);
+        if(isSearching()){
+           loadMoreSearchItems();
+           incrementSearchPage();
+        }
+        else {
+         loadMoreItems();
+         incrementPage();
+        }
+
+    }
+
+    private boolean isSearching(){
+        return !currentQuery.isEmpty();
+    }
+
+    private void loadMoreSearchItems(){
+        RikdagskollenApp.getInstance().getRiksdagenAPIManager().searchForDecision(new DecisionsCallback() {
+            @Override
+            public void onDecisionsFetched(List<DecisionDocument> decisions) {
+                setShowLoadingView(false);
+                searchedDocuments.addAll(decisions);
+                getAdapter().notifyDataSetChanged();
+                setLoadingMoreItems(false);
+            }
+
+            @Override
+            public void onFail(VolleyError error) {
+                setLoadingMoreItems(false);
+                decrementSearchPage();
+            }
+        }, currentQuery, getSearchPageToLoad());
+    }
+
+    private void loadMoreItems(){
         RikdagskollenApp.getInstance().getRiksdagenAPIManager().getDecisions(new DecisionsCallback() {
             @Override
             public void onDecisionsFetched(List<DecisionDocument> documents) {
@@ -71,11 +186,12 @@ public class DecisionsListFragment extends RiksdagenAutoLoadingListFragment {
                 decrementPage();
             }
         }, getPageToLoad());
-        incrementPage();
     }
+
 
     @Override
     RiksdagenViewHolderAdapter getAdapter() {
+        if(isSearching()) return searchAdapter;
         return adapter;
     }
 }
