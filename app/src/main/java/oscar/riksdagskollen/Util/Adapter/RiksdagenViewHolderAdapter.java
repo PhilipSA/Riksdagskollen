@@ -14,7 +14,7 @@ import java.util.List;
 
 public abstract class RiksdagenViewHolderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>{
 
-    private final List<?> items;
+    private List<?> items;
     final List<View> headers = new ArrayList<>();
     final List<View> footers = new ArrayList<>();
 

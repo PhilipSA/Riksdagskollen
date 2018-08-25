@@ -101,7 +101,6 @@ public abstract class RiksdagenAutoLoadingListFragment extends Fragment {
     }
 
     protected void incrementPage(){
-    void incrementPage(){
         pageToLoad++;
     }
 
@@ -136,17 +135,15 @@ public abstract class RiksdagenAutoLoadingListFragment extends Fragment {
         return recyclerView;
     }
 
-    protected void setShowLoadingView(boolean loading){
-        if(loading) {
+    protected void setShowLoadingView(boolean loading) {
+        if (loading) {
             loadingView.setVisibility(View.VISIBLE);
             recyclerView.setVisibility(View.GONE);
-        }
-        else {
+        } else {
             loadingView.setVisibility(View.GONE);
             recyclerView.setVisibility(View.VISIBLE);
         }
-    void setShowLoadingView(boolean loading){
-        if(loading) loadingView.setVisibility(View.VISIBLE);
-        else loadingView.setVisibility(View.GONE);
+
     }
+
 }
